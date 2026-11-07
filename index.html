@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="so"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Land GIS — Khariirad + Legend</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#1F4E79">
+<style>
+:root{--bg:#EEF2F5;--pn:#fff;--ink:#17202A;--mu:#5B6B7A;--ln:#D3DBE2;--ac:#1F4E79;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10161C;--pn:#1A232C;--ink:#E6EDF3;--mu:#93A4B3;--ln:#2C3945;--ac:#7FB2E5}}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif;display:flex;flex-wrap:wrap}
+aside{width:360px;max-width:100%;background:var(--pn);border-right:1px solid var(--ln);padding:14px;overflow:auto;max-height:100vh}
+main{flex:1;min-width:300px;padding:14px;overflow:auto;max-height:100vh}
+h1{font-size:17px;margin:0 0 8px}h2{font-size:13px;margin:16px 0 6px;padding-top:10px;border-top:1px solid var(--ln)}
+label{display:block;font-size:12px;color:var(--mu);margin:5px 0 2px}label.i{display:inline-flex;gap:4px;align-items:center;margin:2px 8px 2px 0}
+input[type=text],select{width:100%;padding:6px 8px;border:1px solid var(--ln);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit}
+input[type=color]{width:34px;height:30px;padding:0;border:1px solid var(--ln);background:none}
+button{padding:6px 10px;border:1px solid var(--ac);background:var(--ac);color:#fff;border-radius:5px;font:inherit;cursor:pointer}
+button.g{background:transparent;color:var(--ac)}button.on{background:var(--ac);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+#drop{border:2px dashed var(--ln);border-radius:8px;padding:16px;text-align:center;color:var(--mu);cursor:pointer}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0}.ly{padding:5px 0;border-bottom:1px solid var(--ln)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ln);border-radius:16px;padding:2px 4px 2px 8px;margin:2px}
+.chip button{padding:2px 8px;border-radius:12px}.dot{width:12px;height:12px;border-radius:3px;border:1px solid #0005}
+table{border-collapse:collapse;width:100%;font-size:12px}td,th{padding:3px 4px;border-bottom:1px solid var(--ln);text-align:right}td:first-child,th:first-child{text-align:left}
+#qc{font-size:13px;margin-top:8px}#page{background:#fff;box-shadow:0 1px 8px #0003;max-width:100%;height:auto;display:block;margin:0 auto;cursor:crosshair}
+@media print{aside,h1{display:none}body,main{display:block;padding:0;max-height:none}#page{box-shadow:none;width:100%}}
+</style></head><body>
+<aside>
+<h1>GeoJSON → Khariirad + Legend</h1>
+<div id="drop" tabindex="0">Ku rid GeoJSON (blocks, plots, xuduud…) ama riix si aad u dooratid</div>
+<input id="file" type="file" accept=".geojson,.json" multiple hidden>
+<h2>1. Layers iyo xuduud</h2>
+<div id="ly"></div>
+<label>Tirinta</label><select id="md"><option value="f">100% xuduudka gudaha ku jira</option><option value="i">Gudaha + qayb ahaan</option><option value="c">Xarunta gudaha ku jirta</option></select>
+<h2>2. Calaamadi</h2>
+<small>Dooro layer-ka, guji features ama jiid sanduuq, kadibna guji magac.</small>
+<div id="al" class="row"></div>
+<div class="row"><button class="g" data-act="sa">Dooro dhammaan</button><button class="g" data-act="sc">Nadiifi</button><button class="g" data-act="inv">Rog</button><b id="si"></b></div>
+<div class="row"><select id="sb" style="flex:1"></select><button class="g" data-act="sby">Dooro magaca/heerka</button></div><label class="i"><input type="checkbox" id="hy" checked> Block calaamadda → plots-ka ku jira sidoo kale</label>
+<div id="ow"></div>
+<div class="row"><input type="text" id="on" placeholder="Magac cusub (owner)" style="flex:1"><input type="color" id="oc" value="#F4A582"><button class="g" data-act="addo">+ Ku dar</button></div>
+<button class="g" data-act="clr">Ka saar calaamad + heer (doorashada)</button>
+<h2>3. Heerarka dhulka</h2>
+<div id="hk"></div>
+<div class="row"><input type="text" id="hn" placeholder="Heerka 4" style="flex:1"><input type="color" id="hc" value="#2A9D8F"><button class="g" data-act="addh">+ Ku dar</button></div>
+<h2>4. Bogga</h2>
+<label>Title khariirada</label><input type="text" id="mt">
+<label>Cinwaanka legend-ka</label><input type="text" id="lt" value="Legend">
+<label>Cabbirka</label><select id="ps"><option value="auto">Auto</option><option>A4</option><option>A3</option><option>A5</option></select>
+<h2>5. Tirada guud</h2><div id="sum"></div>
+<h2>Project, kaydin & nooc hore</h2>
+<div class="row"><input type="text" id="pn" placeholder="Magaca project" style="flex:1"><button data-act="psave">Kaydi</button></div><div id="pl"></div>
+<div class="row"><button class="g" data-act="pexp">Dhoofi project (fayl)</button><button class="g" data-act="pimp">Fur project (fayl)</button></div><input id="pf" type="file" accept=".json" hidden><small id="stg"></small>
+<h2>Inspector & taariikhda</h2><div id="ins"></div>
+<h2>6. Dhoofi</h2>
+<div class="row"><button data-act="svg">SVG</button><button class="g" data-act="png">PNG</button><button class="g" data-act="gj">GeoJSON (calaamadaha la socda)</button></div>
+<div id="qc"></div>
+</aside>
+<main><div class="row" id="nav"><button class="g" data-act="zi" title="Weyneey">＋</button><button class="g" data-act="zo" title="Yaree">－</button><button class="g" data-act="fit">Fit project</button><button class="g" data-act="fits">Fit doorashada</button><button class="g" data-act="pan" data-d="l">←</button><button class="g" data-act="pan" data-d="u">↑</button><button class="g" data-act="pan" data-d="d">↓</button><button class="g" data-act="pan" data-d="r">→</button><small id="co" style="color:var(--mu)"></small></div><svg id="page" xmlns="http://www.w3.org/2000/svg"></svg></main>
+<script>
+/* ===== 0. HELPERS + STATE ===== */
+const $=s=>document.querySelector(s),BH=/bound|xuduud|border|limit|aoi/i,isBlk=l=>/block/i.test(l.name);
+const PAL=['#F4A582','#92C5DE','#B2DF8A','#FDBF6F','#CAB2D6','#FB9A99','#A6CEE3','#E5C494','#66C2A5','#BEBADA','#FFED6F','#8DD3C7'];
+const SZ={A5:[210,148,.75],A4:[297,210,1],A3:[420,297,1.2]};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),blank=v=>v==null||String(v).trim()==='';
+let L=[],OW=[],HK=[{n:'Heerka 1',c:'#111111'},{n:'Heerka 2',c:'#D7191C'},{n:'Heerka 3',c:'#1F78B4'}],AL=0,pos=[],GS=1,VIEW=null,CUR={},ckey='',lastSvg='',O=[0,0],K=[1,1];
+const cv=document.createElement('canvas').getContext('2d');
+function owner(n,c){let o=OW.find(x=>x.n===n);if(!o){o={n,c:c||PAL[OW.length%PAL.length]};OW.push(o)}else if(c)o.c=c;return o}
+function heer(n,c){let h=HK.find(x=>x.n===n);if(!h){h={n,c:c||PAL[(HK.length+4)%PAL.length]};HK.push(h)}else if(c)h.c=c;return h}
+let NOTE='';const msg=(t,ok)=>{NOTE=(ok?'✓ ':'⚠ ')+t;$('#qc').innerHTML='<div><b>'+esc(NOTE)+'</b></div>'};
+
+/* ===== 1. DATA LOADING ===== */
+$('#drop').onclick=()=>$('#file').click();
+$('#drop').ondragover=e=>e.preventDefault();
+$('#drop').ondrop=e=>{e.preventDefault();load(e.dataTransfer.files)};
+$('#file').onchange=e=>load(e.target.files);
+async function load(files){
+  for(const f of files){try{const j=JSON.parse(await f.text()),fe=(j.features||(j.type==='Feature'?[j]:[])).filter(x=>x.geometry);if(!fe.length)throw 0;split(f.name.replace(/\.\w+$/,''),fe)}
+    catch(e){msg('“'+f.name+'” GeoJSON sax ah ma aha.')}}
+  const rk=l=>l.bnd?0:isBlk(l)?1:2;L.sort((a,b)=>rk(a)-rk(b));VIEW=null;
+  AL=Math.max(0,L.findIndex(l=>!l.bnd&&/plot/i.test(l.name)));if(L[AL]&&L[AL].bnd)AL=Math.max(0,L.findIndex(l=>!l.bnd));render()}
+function split(name,fe){let key=null;const ks=[...new Set(fe.flatMap(f=>Object.keys(f.properties||{})))];
+  for(const k of ks){const u=[...new Set(fe.map(f=>f.properties[k]))];if(u.length>=2&&u.length<=8&&u.filter(v=>/block|plot|half|bound|xuduud/i.test(v)).length>=2){key=k;break}}
+  const g={};fe.forEach(f=>{const k=key?String(f.properties[key]):name;(g[k]=g[k]||[]).push(f)});Object.entries(g).forEach(([n,fs])=>mk(n,fs))}
+function mk(name,feats){const P=feats.map(f=>f.properties||{}),ks=[...new Set(P.flatMap(Object.keys))];
+  const ok=ks.find(k=>/owner|milk|calaam|mark/i.test(k)),hk=ks.find(k=>/heer|grade|level/i.test(k));
+  const lk=/block/i.test(name)?ks.find(k=>{const v=P.map(p=>p[k]).filter(x=>!blank(x));return v.length&&new Set(v).size>=.9*feats.length&&!/^(fid|id|gid|objectid)$/i.test(k)&&String(v[0]).length<12}):null;
+  const l={name,feats,on:true,bnd:BH.test(name),del:{},ann:{},hk:{},sel:new Set(),nm:false,idl:!!lk,lk};
+  feats.forEach((f,i)=>{f._i=i;const o=ok&&f.properties[ok],h=hk&&f.properties[hk];if(!blank(o))l.ann[i]=owner(String(o).trim());if(!blank(h))l.hk[i]=heer(String(h).trim()).n});L.push(l)}
+
+/* ===== 2. GEOMETRY (mitir) ===== */
+function eachPt(g,fn){const r=c=>typeof c[0]==='number'?fn(c):c.forEach(r);if(g&&g.coordinates)r(g.coordinates)}
+function setProj(){const xs=[],ys=[];L.forEach(l=>l.feats.forEach(f=>eachPt(f.geometry,p=>{xs.push(p[0]);ys.push(p[1])})));
+  const mx=(Math.min(...xs)+Math.max(...xs))/2,my=(Math.min(...ys)+Math.max(...ys))/2,geo=xs.every(x=>Math.abs(x)<=180)&&ys.every(y=>Math.abs(y)<=90);
+  O=[mx,my];K=geo?[111320*Math.cos(my*Math.PI/180),110574]:[1,1]}
+const pr=p=>[(p[0]-O[0])*K[0],-(p[1]-O[1])*K[1]];
+function rings(g){const t=g.type;return t==='Polygon'?[g.coordinates.map(r=>r.map(pr))]:t==='MultiPolygon'?g.coordinates.map(p=>p.map(r=>r.map(pr))):[]}
+const ra=r=>Math.abs(r.reduce((s,p,i)=>{const q=r[(i+1)%r.length];return s+p[0]*q[1]-q[0]*p[1]},0))/2;
+const area=g=>rings(g).reduce((s,p)=>s+ra(p[0])-p.slice(1).reduce((a,h)=>a+ra(h),0),0);
+function pir(pt,r){let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++)if((r[i][1]>pt[1])!==(r[j][1]>pt[1])&&pt[0]<(r[j][0]-r[i][0])*(pt[1]-r[i][1])/(r[j][1]-r[i][1])+r[i][0])c=!c;return c}
+function cen(g){let n=0,x=0,y=0;eachPt(g,p=>{const q=pr(p);x+=q[0];y+=q[1];n++});return[x/n,y/n]}
+const inB=(p,B)=>B.some(b=>pir(p,b[0])&&!b.slice(1).some(h=>pir(p,h)));
+const segX=(a,b,c,d)=>{const o=(p,q,r)=>(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);return o(a,b,c)*o(a,b,d)<0&&o(c,d,a)*o(c,d,b)<0};
+/* 'f' = 100% gudaha, 'p' = qayb ahaan, 'o' = dibadda */
+function status(f,B){const R=rings(f.geometry);if(!R.length)return inB(cen(f.geometry),B)?'f':'o';
+  const pts=R.flatMap(p=>p[0]),all=pts.every(p=>inB(p,B));
+  const cross=R.some(p=>p.some(r=>r.some((u,i)=>{const v=r[(i+1)%r.length];return B.some(b=>b.some(br=>br.some((s,j)=>segX(u,v,s,br[(j+1)%br.length]))))})));
+  if(all&&!cross)return'f';
+  return(pts.some(p=>inB(p,B))||cross||B.some(b=>b[0].some(p=>R.some(r=>pir(p,r[0])))))?'p':'o'}
+const bndLayer=()=>L.find(l=>l.bnd&&l.on);
+function classify(){const bl=bndLayer(),mode=$('#md').value,k=L.map(l=>l.name+l.bnd+l.on+l.feats.length).join()+mode;if(k===ckey)return;ckey=k;
+  const B=bl?bl.feats.flatMap(f=>rings(f.geometry)):null;
+  L.forEach(l=>l.feats.forEach(f=>{f._s=!B||l.bnd?'f':mode==='c'?(inB(cen(f.geometry),B)?'f':'o'):status(f,B)}))}
+
+/* ===== 3. STATISTICS ===== */
+function stats(){classify();const hasB=!!bndLayer(),mode=$('#md').value;
+  return L.filter(l=>l.on&&!l.bnd).map(l=>{
+    const inn=l.feats.filter(f=>!l.del[f._i]&&(f._s==='f'||(mode==='i'&&f._s==='p'))),mf=inn.filter(f=>l.ann[f._i]),uf=inn.filter(f=>!l.ann[f._i]);
+    const own={},hkc={};mf.forEach(f=>{const n=l.ann[f._i].n;own[n]=(own[n]||0)+1});
+    uf.forEach(f=>{const h=l.hk[f._i]||'';hkc[h]=(hkc[h]||0)+1});
+    const ar=inn.map(f=>f._a=f._a||area(f.geometry)).filter(a=>a>0);
+    return{l,tot:inn.length,mk:mf.length,own,hkc,part:hasB&&mode==='f'?l.feats.filter(f=>f._s==='p'&&!l.del[f._i]).length:null,out:hasB?l.feats.filter(f=>f._s==='o'&&!l.del[f._i]).length:null,
+      ar:ar.length?{avg:ar.reduce((a,b)=>a+b)/ar.length,min:Math.min(...ar),max:Math.max(...ar)}:null,kind:/Point/.test(l.feats[0].geometry.type)?'p':/Line/.test(l.feats[0].geometry.type)?'l':'a'}})}
+const fa=m=>m>=1e4?(m/1e4).toFixed(2)+' ha':m>=100?Math.round(m)+' m²':m.toFixed(1)+' m²';
+function sumHtml(S){if(!S.length)return'';const nm=[...new Set(S.flatMap(s=>Object.keys(s.own)))];
+  const h=HK.filter(x=>S.some(s=>s.hkc[x.n])),hn=S.some(s=>s.hkc['']);
+  const row=(a,v,t)=>`<tr><${t||'td'}>${a}</${t||'td'}>${v.map(x=>`<${t||'td'}>${x}</${t||'td'}>`).join('')}<${t||'td'}>${v.reduce((p,q)=>p+(+q||0),0)}</${t||'td'}></tr>`;
+  const dot=c=>`<span class="dot" style="display:inline-block;background:${c};vertical-align:middle"></span> `;
+  let o='<table>'+row('',S.map(s=>esc(s.l.name)),'th').replace(/<th>(\d+)<\/th><\/tr>$/,'<th>Σ</th></tr>');
+  nm.forEach(n=>o+=row(dot(owner(n).c)+esc(n),S.map(s=>s.own[n]||0)));
+  o+=row('<b>Calaamadsan</b>',S.map(s=>s.mk))+row('Aan calaamadsanayn',S.map(s=>s.tot-s.mk))+row('<b>Wadar (100% gudaha)</b>',S.map(s=>s.tot));
+  if(S.some(s=>s.part))o+=row('Qayb gudaha (lama tirin)',S.map(s=>s.part||0));if(S.some(s=>s.out))o+=row('Dibadda xuduudka',S.map(s=>s.out||0));
+  h.forEach(x=>o+=row('<small>Heer · </small>'+dot(x.c)+esc(x.n),S.map(s=>s.hkc[x.n]||0)));if(hn)o+=row('<small>Heer la’aan</small>',S.map(s=>s.hkc['']||0));
+  return o+'</table><small>Heerarku waxay tirinayaan kuwa aan calaamadsanayn oo keliya.</small>'}
+
+/* ===== 4. SVG HELPERS + LEGEND ===== */
+let notes=[],rec=[];
+function tw(t,sz,b){cv.font=(b?'bold ':'')+'100px Arial';return cv.measureText(t).width/100*sz*.3528}
+function T(t,x,y,w,h,sz,o={}){t=String(t);let s=sz;const W=tw(t,s,o.b);
+  if(W>w){s=sz*w/W*.97;if(s<5.2){s=5.2;while(t.length>2&&tw(t+'…',s,o.b)>w)t=t.slice(0,-1);t+='…';notes.push('Qoraalka “'+t+'” waa la gooyay.')}}
+  rec.push([x,y,w,h,t]);const a=o.a||'l',ax=a==='c'?x+w/2:a==='r'?x+w:x;
+  return`<text x="${ax}" y="${y+h/2}" font-size="${s*.3528}" font-family="Arial,sans-serif" ${o.b?'font-weight="bold"':''} fill="${o.c||'#1E293B'}" text-anchor="${a==='c'?'middle':a==='r'?'end':'start'}" dominant-baseline="central">${esc(t)}</text>`}
+const R=(x,y,w,h,f,s,sw,d,r)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r||0}" fill="${f||'none'}" stroke="${s||'none'}" stroke-width="${sw||.2}" ${d?'stroke-dasharray="1.6 1"':''}/>`;
+const sty=l=>l.bnd?{fill:'#EEF1F3',stroke:'#E31A1C',w:.5,d:1}:/half/i.test(l.name)?{fill:null,stroke:'#0A6A6A',w:.25}:isBlk(l)?{fill:null,stroke:'#1F3A5F',w:.55}:{fill:null,stroke:'#4D636D',w:.15};
+function table(o,g,y,p,title,rows,cols){const P=3.9,X=g.PX+P,W=g.PW-2*P;
+  o.s+=T(title.toUpperCase(),X,y,W,3.2,6.5,{b:1,c:'#64748B'})+R(X,y+3.4,W,.2,'#CBD5E1');y+=4.6;
+  const cx=i=>X+W-9*(cols.length+1-i);cols.forEach((c,i)=>o.s+=T(c,cx(i),y-.4,9,3,6,{a:'r',c:'#64748B',b:1}));o.s+=T('Σ',cx(cols.length),y-.4,9,3,6,{a:'r',c:'#64748B',b:1});
+  rows.forEach(([lab,col,stroke,v])=>{o.s+=(stroke?R(X,y+p/2-1.75,5.6,3.5,'none',col,.5):R(X,y+p/2-1.75,5.6,3.5,col,'#475569',.2))+T(lab,X+7.6,y,W-7.6-9*(cols.length+1),p,8);
+    v.forEach((n,i)=>o.s+=T(n,cx(i),y,9,p,8,{a:'r'}));o.s+=T(v.reduce((a,b)=>a+b,0),cx(cols.length),y,9,p,8,{a:'r',b:1})+R(X,y+p-.1,W,.15,'#E2E8F0');y+=p});return y+1.2}
+function legend(S,g,title){rec=[];notes=[];const{PX,PY,PW,PH}=g,P=3.9,W=PW-2*P,X=PX+P,o={s:''};let y=PY+3;
+  o.s+=R(PX,PY,PW,PH,'#F8FAFC','#CBD5E1',.3,0,2);
+  if(title){o.s+=R(PX,PY,PW,10,'#1F3A5F',0,0,0,2)+R(PX,PY+5,PW,5,'#1F3A5F')+T(title,X+.7,PY+1,W,8,14,{b:1,c:'#fff'});y=PY+12.6}
+  o.s+=T('STATISTICS',X,y,W,3.2,6.5,{b:1,c:'#64748B'})+R(X,y+3.4,W,.2,'#CBD5E1');y+=4.6;
+  const n=Math.min(S.length,4),gap=2.1,tws=(W-(n-1)*gap)/Math.max(n,1),cx=[];
+  S.slice(0,n).forEach((s,i)=>{const x=X+i*(tws+gap),st=sty(s.l);cx.push(x);
+    o.s+=R(x,y,tws,17.6,'#fff','#E2E8F0',.25,0,1.2)+R(x+.4,y+.2,tws-.8,1.3,st.stroke)+T(s.tot,x,y+3,tws,8.2,21,{b:1,c:'#1F3A5F',a:'c'})+T(s.l.name.toUpperCase(),x+.5,y+12.4,tws-1,3.2,6.5,{b:1,c:'#64748B',a:'c'})});
+  y+=20.4;const rows=[['Calaamadsan','#E67E22',1,S.map(s=>s.mk),12],['Aan calaamadsanayn','#64748B',0,S.map(s=>s.tot-s.mk),12]];
+  if(S.some(s=>s.part))rows.push(['Qayb gudaha (lama tirin)','#64748B',null,S.map(s=>s.part==null?'-':s.part),12]);
+  if(S.some(s=>s.out!=null))rows.push(['Dibadda xuduudka','#64748B',null,S.map(s=>s.out==null?'-':s.out),12]);
+  if(S.some(s=>s.ar)){rows.push(['Cabbir celcelis','#64748B',null,S.map(s=>s.ar?fa(s.ar.avg):'-'),9.5]);rows.push(['Yar – weyn','#64748B',null,S.map(s=>s.ar?fa(s.ar.min)+' – '+fa(s.ar.max):'-'),6.8])}
+  rows.forEach(([c,k,d,v,fs])=>{let off=0;if(d!=null){o.s+=`<circle cx="${X+1.2}" cy="${y+1.7}" r="1.2" fill="${d?k:'#fff'}" stroke="${k}" stroke-width=".35"/>`;off=3.6}
+    o.s+=T(c,X+off,y,W-off,3.4,7.5,{b:1});S.slice(0,n).forEach((s,i)=>{const t=String(v[i]);o.s+=T(t,cx[i],y+3.9,tws,5.2,fs,{b:1,a:'c',c:(t==='0'||t==='-')?'#94A3B8':k})});y+=10.4});
+  y+=2;const C=S.slice(0,3),cn=C.map(s=>s.l.name.slice(0,5)),nm=[...new Set(S.flatMap(s=>Object.keys(s.own)))];
+  const hr=HK.filter(h=>C.some(s=>s.hkc[h.n])).map(h=>[h.n,h.c,1,C.map(s=>s.hkc[h.n]||0)]);if(C.some(s=>s.hkc['']&&hr.length))hr.push(['Heer la’aan','#94A3B8',1,C.map(s=>s.hkc['']||0)]);
+  const or=nm.map(k=>[k,owner(k).c,0,C.map(s=>s.own[k]||0)]),clip=bndLayer(),nr=or.length+hr.length+(clip?1:0);
+  const raw=((PY+PH-3)-y-(or.length?5.8:0)-(hr.length?5.8:0))/Math.max(1,nr),p=Math.max(3,Math.min(5.1,raw));
+  if(or.length)y=table(o,g,y,p,'Calaamadsan · wadar',or,cn);
+  if(hr.length)y=table(o,g,y,p,'Heerarka (aan calaamadsanayn)',hr,cn);
+  if(clip){o.s+=R(X,y+p/2-1.75,5.6,3.5,'none','#E31A1C',.5,1)+T(clip.name,X+7.6,y,W-7.6,p,8);y+=p}
+  return{o:o.s,raw,y}}
+
+/* ===== 5. MAP ===== */
+function bounds(fs){let a=[1e18,1e18,-1e18,-1e18];fs.forEach(f=>eachPt(f.geometry,p=>{const q=pr(p);a=[Math.min(a[0],q[0]),Math.min(a[1],q[1]),Math.max(a[2],q[0]),Math.max(a[3],q[1])]}));return a}
+function mapSvg(g,bb){const[x0,y0,x1,y1]=bb,k=1.08;let sc=Math.max((x1-x0)*k/(g.MW*.001),(y1-y0)*k/(g.MH*.001));
+  const e=10**Math.floor(Math.log10(sc));sc=[1,1.25,1.5,2,2.5,3,4,5,7.5,10].map(m=>m*e).find(v=>v>=sc*.999);
+  let cx=(x0+x1)/2,cy=(y0+y1)/2;if(VIEW){sc=VIEW.sc;cx=VIEW.cx;cy=VIEW.cy}CUR={sc,cx,cy,MW:g.MW,MH:g.MH,MX:g.MX,MY:g.MY};const mx=q=>(g.MX+g.MW/2)+(q[0]-cx)/sc*1000,my=q=>(g.MY+g.MH/2)+(q[1]-cy)/sc*1000,T2=q=>mx(q).toFixed(2)+' '+my(q).toFixed(2);
+  const path=gm=>rings(gm).map(p=>p.map(r=>'M'+r.map(T2).join('L')+'Z').join('')).join('');
+  const vis=L.filter(l=>l.on),hasB=!!bndLayer(),poly=l=>/Polygon/.test(l.feats[0].geometry.type);
+  /* tartiib: xuduud → block-fills → layers kale → block-xariiqyo (si plots-ka loo arko) */
+  const passes=[...vis.filter(l=>l.bnd).map(l=>[l,'a']),...vis.filter(l=>!l.bnd&&isBlk(l)).map(l=>[l,'f']),...vis.filter(l=>!l.bnd&&!isBlk(l)).map(l=>[l,'a']),...vis.filter(l=>!l.bnd&&isBlk(l)).map(l=>[l,'s'])];
+  let o=`<clipPath id="cp"><rect x="${g.MX}" y="${g.MY}" width="${g.MW}" height="${g.MH}"/></clipPath><g clip-path="url(#cp)">`;
+  passes.forEach(([l,m])=>{if(!poly(l))return;const st=sty(l),li=L.indexOf(l);
+    l.feats.forEach((f,fi)=>{if(l.del[fi])return;const an=l.ann[fi],h=l.hk[fi]!=null?HK.find(x=>x.n===l.hk[fi]):null,sl=l.sel.has(fi),op=hasB&&!l.bnd&&f._s!=='f'?.45:1;
+      const fill=m==='s'?(li===AL?'transparent':'none'):(an?an.c:st.fill||'none'),stroke=m==='f'?'none':sl?'#FF8800':h?h.c:st.stroke,sw=sl?.8:h?.5:st.w;
+      if(m!=='f'&&!l.bnd){const c=cen(f.geometry);pos.push([li,fi,mx(c),my(c)])}
+      o+=`<path data-l="${li}" data-f="${fi}" d="${path(f.geometry)}" fill="${fill}" fill-rule="evenodd" stroke="${stroke}" stroke-width="${sw}" opacity="${op*(l.op==null?1:l.op)}" ${st.d?'stroke-dasharray="1.6 1"':''} style="pointer-events:${m!=='f'&&li===AL?'all':'none'}"/>`})});
+  /* labels: magaca la qoray (calaamadsan) + ID */
+  vis.forEach(l=>{if(!l.bnd&&poly(l)&&(l.nm||l.idl))l.feats.forEach((f,fi)=>{if(l.del[fi])return;const ln=[];if(l.idl&&l.lk)ln.push([f.properties[l.lk],'#1F4E8C']);if(l.nm&&l.ann[fi])ln.push([l.ann[fi].n,'#111']);if(!ln.length)return;
+    const a=f._a=f._a||area(f.geometry),side=Math.sqrt(a)/(sc/1000),fs=Math.max(1.2,Math.min(3,side*.22)),c=cen(f.geometry);
+    ln.forEach(([t,cl],i)=>o+=`<text x="${mx(c)}" y="${my(c)+(i-(ln.length-1)/2)*fs*1.15}" font-size="${fs}" font-weight="bold" font-family="Arial" fill="${cl}" stroke="#fff" stroke-width="${fs*.22}" paint-order="stroke" text-anchor="middle" dominant-baseline="central" style="pointer-events:none">${esc(t)}</text>`)})});
+  o+='</g>';const ix=g.MX+4,iy=g.MY+4;
+  o+=`<path d="M${ix+5} ${iy}L${ix+9} ${iy+12}L${ix+5} ${iy+9.5}L${ix+1} ${iy+12}Z" fill="#111"/><text x="${ix+5}" y="${iy+16}" font-size="3.4" font-weight="bold" text-anchor="middle" font-family="Arial">N</text>`;
+  const bl=[1,2,5,10,20,25,50,100,200,250,500,1000,2000,5000].find(v=>v/sc*1000>=22)||5000,bw=bl/sc*1000,sx=g.MX+g.MW-bw-6,sy=g.MY+g.MH-8;
+  return o+R(sx-3,sy-3,bw+14,10,'#fff','none')+R(sx,sy,bw/2,2,'#000','#000',.2)+R(sx+bw/2,sy,bw/2,2,'#fff','#000',.2)
+   +`<text x="${sx}" y="${sy-.8}" font-size="2.4" font-family="Arial">0</text><text x="${sx+bw}" y="${sy-.8}" font-size="2.4" font-family="Arial" text-anchor="middle">${bl>=1000?bl/1000+' km':bl+' m'}</text><text x="${sx}" y="${sy+5}" font-size="2.4" font-family="Arial">1:${Math.round(sc).toLocaleString('en')}</text>`}
+
+/* ===== 6. RENDER ===== */
+function render(){ui();if(!L.length){$('#page').innerHTML='';return}
+  pos=[];setProj();const S=stats(),bl=bndLayer(),bb=bounds(bl?bl.feats:L.filter(l=>l.on).flatMap(l=>l.feats)),asp=(bb[2]-bb[0])/(bb[3]-bb[1]);
+  $('#sum').innerHTML=sumHtml(S);
+  const title=$('#mt').value.trim(),lt=$('#lt').value.trim(),ps=$('#ps').value,order=ps==='auto'?['A4','A3']:[ps];let g,lg;
+  for(let i=0;i<order.length;i++){let[W,H,s]=SZ[order[i]];if(asp<.85)[W,H]=[H,W];
+    const uw=W/s,uh=H/s,m=5/s,th=title?11.5:0;g={W,H,s,uw,uh,m,PW:77,PX:uw-m-77,PY:m,PH:uh-2*m,MX:m,MY:m+th,MH:uh-m-(m+th),TH:th};g.MW=g.PX-2*m;
+    lg=legend(S,g,lt);if(lg.raw>=4.2||i===order.length-1)break}
+  GS=g.s;let o=`<g transform="scale(${g.s})">`;
+  if(title)o+=R(g.MX,g.m,g.MW,10,'#fff','#000',.3)+T(title,g.MX+2,g.m,g.MW-4,10,13,{b:1,c:'#1F3A5F',a:'c'});
+  o+=R(g.MX,g.MY,g.MW,g.MH,'#fff','#000',.3)+mapSvg(g,bb)+lg.o+'</g>';
+  const svg=$('#page');svg.setAttribute('viewBox',`0 0 ${g.W} ${g.H}`);svg.setAttribute('width',g.W+'mm');svg.setAttribute('height',g.H+'mm');
+  svg.innerHTML=`<rect width="${g.W}" height="${g.H}" fill="#fff"/>`+o;lastSvg=new XMLSerializer().serializeToString(svg);qc(S,lg,g);ins()}
+function qc(S,lg,g){const w=[...new Set(notes)];if(lg.raw<3.4)w.push('Legend-ku aad buu u dheer yahay; dooro A3 ama yaree layers-ka.');if(lg.y>g.PY+g.PH)w.push('Legend-ku wuu ka baxayaa bogga.');
+  for(let i=0;i<rec.length;i++)for(let j=i+1;j<rec.length;j++){const a=rec[i],b=rec[j];if(a[4]&&b[4]&&Math.min(a[0]+a[2],b[0]+b[2])-Math.max(a[0],b[0])>.3&&Math.min(a[1]+a[3],b[1]+b[3])-Math.max(a[1],b[1])>.3){w.push('Qoraal is dul saaran: “'+a[4]+'” / “'+b[4]+'”.');i=1e9;break}}
+  S.forEach(s=>{if(!s.tot)w.push('“'+s.l.name+'”: wax feature ah gudaha xuduudka ma jiro.');const x=Object.values(s.l.ann).length-s.mk;if(x>0&&bndLayer())w.push('“'+s.l.name+'”: '+x+' calaamadsan ayaa aan 100% gudaha ku jirin (lama tirin).')});
+  if(!bndLayer())w.push('Xuduud lama doorin: calaamadee layer-ka xuduudka (“xuduud”).');
+  $('#qc').innerHTML=(NOTE?'<div><b>'+esc(NOTE)+'</b></div>':'')+(w.length?w.map(t=>'<div>⚠ '+esc(t)+'</div>').join(''):'<div>✓ QC: cillad lama helin.</div>');NOTE=''}
+
+/* ===== 7. UI: calaamadin + heerar ===== */
+function ui(){plist();
+  $('#ly').innerHTML=L.map((l,i)=>`<div class="ly"><label class="i"><input type="checkbox" data-a="on" data-i="${i}" ${l.on?'checked':''}><b>${esc(l.name)}</b> <small>${l.feats.length}</small></label><br>
+   <label class="i"><input type="checkbox" data-a="bnd" data-i="${i}" ${l.bnd?'checked':''}>xuduud</label><label class="i"><input type="checkbox" data-a="lock" data-i="${i}" ${l.lock?'checked':''}>qufuli</label><input type="range" min="10" max="100" value="${Math.round((l.op==null?1:l.op)*100)}" data-a="op" data-i="${i}" style="width:70px" title="Opacity">${l.bnd?'':`<label class="i"><input type="checkbox" data-a="nm" data-i="${i}" ${l.nm?'checked':''}>muuji magaca</label>${l.lk?`<label class="i"><input type="checkbox" data-a="idl" data-i="${i}" ${l.idl?'checked':''}>ID</label>`:''}`}</div>`).join('');
+  $('#al').innerHTML=L.map((l,i)=>l.bnd?'':`<button class="${i===AL?'on':'g'}" data-act="al" data-i="${i}">${esc(l.name)}</button>`).join('');
+  const l=L[AL];$('#si').textContent=l?l.sel.size+' la doortay':'';
+  $('#ow').innerHTML=OW.map((o,i)=>`<span class="chip"><input type="color" value="${o.c}" data-oc="${i}"><button data-act="own" data-i="${i}">${esc(o.n)}</button></span>`).join('');
+  const cnt=h=>L.reduce((a,x)=>a+Object.values(x.hk).filter(v=>v===h).length,0);
+  $('#hk').innerHTML=HK.map((h,i)=>`<div class="row"><input type="color" value="${h.c}" data-hc="${i}"><span style="flex:1">${esc(h.n)} <small>${cnt(h.n)}</small></span><button class="g" data-act="hks" data-i="${i}">Dooro</button><button data-act="hk" data-i="${i}">U dhiib</button></div>`).join('')}
+function kids(l,idx){const R=idx.flatMap(i=>rings(l.feats[i].geometry)),out=[];
+  L.forEach(m=>{if(m===l||m.bnd||!/Polygon/.test(m.feats[0].geometry.type))return;m.feats.forEach((f,j)=>{const c=cen(f.geometry);if(R.some(p=>pir(c,p[0])))out.push([m,j])})});return out}
+function each(fn){const l=L[AL];if(!l||!l.sel.size){msg('Marka hore dooro features (guji ama jiid khariirada).');return false}
+  if(l.lock){msg('Layer-ka waa la qufulay; wax lagama beddeli karo.');return false}
+  const idx=[...l.sel];idx.forEach(i=>fn(l,i));log('Calaamad/heer: '+l.name+' ×'+idx.length);if(isBlk(l)&&$('#hy').checked)kids(l,idx).forEach(([m,j])=>fn(m,j));l.sel.clear();return true}
+const P=$('#page');let dr=null;
+P.onmousedown=e=>{dr={x:e.clientX,y:e.clientY}};
+P.onmouseup=e=>{if(!dr)return;const l=L[AL],d=dr;dr=null;if(!l)return;const r=P.getBoundingClientRect(),k=P.viewBox.baseVal.width/r.width/GS,u=(x,y)=>[(x-r.left)*k,(y-r.top)*k];
+  if(Math.abs(e.clientX-d.x)<4&&Math.abs(e.clientY-d.y)<4){const t=e.target;if(t.dataset&&t.dataset.f!=null&&+t.dataset.l===AL){const i=+t.dataset.f;l.sel.has(i)?l.sel.delete(i):l.sel.add(i)}}
+  else{const a=u(d.x,d.y),b=u(e.clientX,e.clientY),x0=Math.min(a[0],b[0]),x1=Math.max(a[0],b[0]),y0=Math.min(a[1],b[1]),y1=Math.max(a[1],b[1]);
+    pos.forEach(([li,fi,X,Y])=>{if(li===AL&&X>=x0&&X<=x1&&Y>=y0&&Y<=y1)l.sel.add(fi)})}render()};
+$('#ly').onchange=e=>{const t=e.target,l=L[t.dataset.i];if(!l)return;const a=t.dataset.a;if(a==='on')l.on=t.checked;else if(a==='op')l.op=+t.value/100;else l[a]=t.checked;render()};
+document.body.onclick=e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,i=+b.dataset.i,l=L[AL];
+  if(a==='al')AL=i;else if(a==='sa'&&l)l.feats.forEach((f,j)=>{if(!l.del[j])l.sel.add(j)});else if(a==='sc'&&l)l.sel.clear();
+  else if(a==='own')each((m,j)=>m.ann[j]=OW[i]);else if(a==='hk')each((m,j)=>m.hk[j]=HK[i].n);
+  else if(a==='hks'&&l)l.sel=new Set(Object.keys(l.hk).filter(j=>l.hk[j]===HK[i].n).map(Number));
+  else if(a==='clr')each((m,j)=>{delete m.ann[j];delete m.hk[j]});
+  else if(a==='addo'){const n=$('#on').value.trim();if(n){owner(n,$('#oc').value);$('#on').value=''}}
+  else if(a==='addh'){const n=$('#hn').value.trim();if(n){heer(n,$('#hc').value);$('#hn').value=''}}
+  else if(a==='inv'&&l)l.feats.forEach((f,j)=>l.sel.has(j)?l.sel.delete(j):l.sel.add(j));
+  else if(a==='sby'&&l){const v=$('#sb').value,t=v[0],n=v.slice(2);l.sel=new Set(l.feats.map((f,j)=>j).filter(j=>t==='o'?l.ann[j]&&l.ann[j].n===n:l.hk[j]===n))}
+  else if(a==='psave'){const n=$('#pn').value.trim();if(!n||!L.length)return msg('Geli magac project oo geli xog.');const P=store(),old=P[n];log('Kaydiyey project '+n);
+    P[n]={t:Date.now(),data:pack(),snaps:[...(old?[{t:old.t,data:old.data}]:[]),...(old?old.snaps||[]:[])].slice(0,5)};if(put(P))msg('Project “'+n+'” waa la kaydiyey.',1)}
+  else if(a==='pload'){const p=store()[b.dataset.k];if(p){unpack(p.data);$('#pn').value=b.dataset.k;log('Furay project '+b.dataset.k)}}
+  else if(a==='pprev'){const P=store(),p=P[b.dataset.k];if(p&&p.snaps&&p.snaps.length){const s=p.snaps.shift();p.snaps.push({t:p.t,data:p.data});p.t=s.t;p.data=s.data;if(put(P)){unpack(p.data);log('Nooc hore ayaa la soo celiyey: '+b.dataset.k)}}else msg('Nooc hore ma jiro.')}
+  else if(a==='pdel'){const k=b.dataset.k;if(pend===k){const P=store();delete P[k];put(P);pend=null}else pend=k}
+  else if(a==='gj'){const fe=L.flatMap(l=>l.feats.map((f,i)=>({type:'Feature',geometry:f.geometry,properties:{...f.properties,layer:l.name,owner:l.ann[i]?l.ann[i].n:null,heerka:l.hk[i]||null,deleted:l.del[i]?true:null}})));log('Dhoofiyey GeoJSON');dl(new Blob([JSON.stringify({type:'FeatureCollection',features:fe})],{type:'application/json'}),'khariirad-data.json')}
+  else if(a==='isave'){if(l&&!l.lock&&l.sel.size===1){const i=[...l.sel][0];document.querySelectorAll('.ek').forEach(x=>setProp(l,i,x.dataset.k,x.value))}}
+  else if(a==='iall'){const k=$('#mk').value.trim(),v=$('#mv').value;if(l&&!l.lock&&k)l.sel.forEach(i=>setProp(l,i,k,v))}
+  else if(a==='zi'&&CUR.sc)VIEW={...CUR,sc:CUR.sc/1.5};
+  else if(a==='zo'&&CUR.sc)VIEW={...CUR,sc:CUR.sc*1.5};
+  else if(a==='fit')VIEW=null;
+  else if(a==='fits'){if(l&&l.sel.size){const bb=bounds([...l.sel].map(j=>l.feats[j])),w=bb[2]-bb[0],h=bb[3]-bb[1];VIEW={cx:(bb[0]+bb[2])/2,cy:(bb[1]+bb[3])/2,sc:Math.max(w*1.4/(CUR.MW*.001),h*1.4/(CUR.MH*.001),1)}}else msg('Marka hore dooro features.')}
+  else if(a==='pan'&&CUR.sc){const d=b.dataset.d,s=CUR.sc*.00025,w=CUR.MW*s,h=CUR.MH*s;VIEW={...CUR,cx:CUR.cx+(d==='l'?-w:d==='r'?w:0),cy:CUR.cy+(d==='u'?-h:d==='d'?h:0)}}
+  else if(a==='sdel'){const r=$('#dr')?$('#dr').value.trim():'';if(!l||!l.sel.size)return msg('Dooro features.');if(l.lock)return msg('Layer-ka waa la qufulay.');if(!r)return msg('Geli sababta tirtirka.');
+    l.sel.forEach(j=>l.del[j]={t:new Date().toLocaleString(),r});log('Tirtiray (soft) '+l.name+' ×'+l.sel.size+' · '+r);l.sel.clear()}
+  else if(a==='rest'){if(l&&l.del[i]&&!l.lock){delete l.del[i];log('Soo celiyey '+l.name+'#'+i)}}
+  else if(a==='pexp'){if(!L.length)return msg('Xog ma jirto.');dl(new Blob([pack()],{type:'application/json'}),($('#pn').value.trim()||'project')+'.project.json');log('Dhoofiyey project file')}
+  else if(a==='pimp')$('#pf').click();
+  else if(a==='svg')dl(new Blob([lastSvg],{type:'image/svg+xml'}),'khariirad.svg');
+  else if(a==='png')png();render()};
+document.body.oninput=e=>{const t=e.target;if(t.dataset.oc!=null)OW[t.dataset.oc].c=t.value;else if(t.dataset.hc!=null)HK[t.dataset.hc].c=t.value;else if(!['on','oc','hn','hc','hy'].includes(t.id))void 0;
+  if(t.dataset.oc!=null||t.dataset.hc!=null||['mt','lt','ps','md'].includes(t.id))render()};
+function png(){const s=$('#page'),w=s.viewBox.baseVal.width,h=s.viewBox.baseVal.height,im=new Image();
+  im.onload=()=>{const c=document.createElement('canvas');c.width=w*12;c.height=h*12;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);c.toBlob(b=>dl(b,'khariirad.png'))};
+  im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(lastSvg)}
+async function dl(b,n){try{const d=window.claude&&await window.claude.use('downloads');if(d){await d.save({filename:n,data:b});return}}catch(e){if(e&&e.code==='declined')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();a.remove()}
+/* ===== 8. UPGRADE: project, nooc hore, audit, inspector ===== */
+const LS='lgis_projects';let AUD=[],pend=null;
+const log=a=>{AUD.unshift({t:new Date().toLocaleString(),a});AUD=AUD.slice(0,200)};
+/* kaydinta: IndexedDB (kayd weyn, badbaado) oo leh nuqul xusuuseed si API-gu sync u ahaado */
+const DBN='land-gis',STN='kv';let CACHE={};
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open(DBN,1);r.onupgradeneeded=()=>r.result.createObjectStore(STN);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const idbGet=k=>idb().then(d=>new Promise(res=>{const q=d.transaction(STN).objectStore(STN).get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res()}));
+const idbSet=(k,v)=>idb().then(d=>new Promise((res,rej)=>{const t=d.transaction(STN,'readwrite');t.objectStore(STN).put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)}));
+const store=()=>CACHE;
+function put(o){CACHE=o;idbSet('projects',o).catch(()=>msg('Kaydinta way fashilantay (kaydka buuxa ama la xiray). Dhoofi project-ka fayl ahaan.'));return true}
+const pack=()=>JSON.stringify({S:{mt:$('#mt').value,lt:$('#lt').value,ps:$('#ps').value,md:$('#md').value,view:VIEW},OW,HK,AUD,L:L.map(l=>({name:l.name,bnd:l.bnd,on:l.on,nm:l.nm,idl:l.idl,lk:l.lk,op:l.op,lock:l.lock,del:l.del,feats:l.feats.map(f=>({type:'Feature',geometry:f.geometry,properties:f.properties})),ann:Object.fromEntries(Object.entries(l.ann).map(([i,o])=>[i,o.n])),hk:l.hk}))});
+function unpack(s){const d=JSON.parse(s);OW=d.OW||[];HK=d.HK||HK;AUD=d.AUD||[];
+  L=d.L.map(x=>{const l={...x,sel:new Set(),ann:{},hk:x.hk||{},del:x.del||{}};l.feats.forEach((f,i)=>f._i=i);Object.entries(x.ann).forEach(([i,n])=>l.ann[i]=owner(n));return l});ckey='';VIEW=null;AL=Math.max(0,L.findIndex(l=>!l.bnd));if(d.S){$('#mt').value=d.S.mt||'';$('#lt').value=d.S.lt||'';$('#ps').value=d.S.ps||'auto';$('#md').value=d.S.md||'f';VIEW=d.S.view||null}}
+function plist(){const P=store(),ks=Object.keys(P);
+  $('#pl').innerHTML=ks.map(k=>`<div class="row"><span style="flex:1"><b>${esc(k)}</b> <small>${new Date(P[k].t).toLocaleDateString()} · ${(P[k].snaps||[]).length} nooc hore</small></span><button class="g" data-act="pload" data-k="${esc(k)}">Fur</button><button class="g" data-act="pprev" data-k="${esc(k)}">Nooc hore</button><button class="g" data-act="pdel" data-k="${esc(k)}">${pend===k?'Xaqiiji?':'Tirtir'}</button></div>`).join('')||'<small>Project la kaydiyey ma jiro.</small>';
+  $('#sb').innerHTML=OW.map(o=>`<option value="o:${esc(o.n)}">Owner: ${esc(o.n)}</option>`).join('')+HK.map(h=>`<option value="h:${esc(h.n)}">Heer: ${esc(h.n)}</option>`).join('')}
+function setProp(l,i,k,v){const p=l.feats[i].properties,o=p[k];if(String(o==null?'':o)===v)return false;
+  if(typeof o==='number'&&(v===''||isNaN(+v))){msg('“'+k+'” waa lambar; geli qiime sax ah.');return false}
+  p[k]=typeof o==='number'?+v:v;log(l.name+'#'+i+' '+k+': '+(o==null?'':o)+' → '+v);return true}
+function ins(){const l=L[AL],el=$('#ins');let h='<small>Dooro feature si aad u aragto attributes-keeda.</small>';
+  if(l&&l.sel.size===1){const i=[...l.sel][0],p=l.feats[i].properties;
+    h=`<small>${esc(l.name)} #${i}${l.lock?' · 🔒 la qufuley':''}</small><table>${Object.keys(p).map(k=>`<tr><td>${esc(k)}</td><td><input type="text" class="ek" data-k="${esc(k)}" value="${esc(p[k]==null?'':p[k])}" ${l.lock?'disabled':''}></td></tr>`).join('')}</table><div class="row"><b>Owner:</b> ${l.ann[i]?esc(l.ann[i].n):'—'} · <b>Heer:</b> ${esc(l.hk[i]||'—')}</div><button data-act="isave" ${l.lock?'disabled':''}>Kaydi attributes</button>`}
+  else if(l&&l.sel.size>1)h=`<small>${l.sel.size} la doortay · ${esc(l.name)}</small><div class="row"><input type="text" id="mk" placeholder="Field" style="flex:1"><input type="text" id="mv" placeholder="Qiime" style="flex:1"></div><button data-act="iall" ${l.lock?'disabled':''}>Ku dabaq dhammaan</button>`;
+  el.innerHTML=h+delHtml(l)+`<div style="font-size:12px;max-height:130px;overflow:auto;margin-top:8px"><b>Taariikhda</b>${AUD.slice(0,12).map(x=>`<div>${esc(x.t)} · ${esc(x.a)}</div>`).join('')||' —'}</div>`}
+function delHtml(l){if(!l)return'';const dl=Object.entries(l.del||{});
+  return(l.sel.size?`<div class="row" style="margin-top:8px"><input type="text" id="dr" placeholder="Sababta tirtirka" style="flex:1"><button class="g" data-act="sdel">Tirtir (soft)</button></div>`:'')+(dl.length?`<div style="font-size:12px;margin-top:6px"><b>La tirtiray (${dl.length})</b>${dl.map(([j,d])=>`<div class="row"><span style="flex:1">#${j} · ${esc(d.t)} · ${esc(d.r||'—')}</span><button class="g" data-act="rest" data-i="${j}">Soo celi</button></div>`).join('')}</div>`:'')}
+P.onmousemove=e=>{if(!CUR.sc)return;const r=P.getBoundingClientRect(),k=P.viewBox.baseVal.width/r.width/GS,ux=(e.clientX-r.left)*k,uy=(e.clientY-r.top)*k,
+  qx=CUR.cx+(ux-(CUR.MX+CUR.MW/2))*CUR.sc/1000,qy=CUR.cy+(uy-(CUR.MY+CUR.MH/2))*CUR.sc/1000;
+  $('#co').textContent=K[0]===1?`X ${(qx+O[0]).toFixed(1)}  Y ${(O[1]-qy).toFixed(1)} (mitir) · 1:${Math.round(CUR.sc).toLocaleString('en')}`:`Lon ${(O[0]+qx/K[0]).toFixed(6)}  Lat ${(O[1]-qy/K[1]).toFixed(6)} · 1:${Math.round(CUR.sc).toLocaleString('en')}`};
+$('#pf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{unpack(await f.text());log('Furay project file '+f.name);render()}catch(x){msg('Fayl project sax ah ma aha.')}e.target.value=''};
+(async()=>{try{let v=await idbGet('projects');if(!v){try{v=JSON.parse(localStorage.getItem(LS)||'null')}catch(e){}}CACHE=v||{};if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){msg('IndexedDB lama heli karo; project-ka waxaa lagu hayn doonaa xusuusta keliya.')}plist()})();
+const net=()=>$('#stg').textContent=(navigator.onLine?'● Online':'○ Offline (wali waa shaqeynayaa)')+' · kaydka: browser-kaaga (IndexedDB)';
+addEventListener('online',net);addEventListener('offline',net);net();
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+ui();
+</script></body></html>
