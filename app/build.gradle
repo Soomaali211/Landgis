@@ -1,0 +1,20 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'so.landgis.blocksplots'
+    compileSdk 34
+    defaultConfig {
+        applicationId "so.landgis.blocksplots"
+        minSdk 29            // Android 10+ (waxay u ogolaanaysaa keydinta Downloads iyada oo aan permission la weydiin)
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes { release { minifyEnabled false } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies { implementation 'androidx.webkit:webkit:1.11.0' }
